@@ -250,6 +250,7 @@ typedef struct dt_develop_t
     GtkWidget *floating_window, *softproof_button, *gamut_button;
   } profile;
 
+  gboolean darkroom_skip_mouse_events; // skip mouse events for masks
 } dt_develop_t;
 
 void dt_dev_init(dt_develop_t *dev, int32_t gui_attached);
