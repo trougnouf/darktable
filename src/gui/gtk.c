@@ -224,19 +224,9 @@ static void key_accel_changed(GtkAccelMap *object, gchar *accel_path, guint acce
   dt_accel_path_view(path, sizeof(path), "darkroom", "allow to pan & zoom while editing masks");
   gtk_accel_map_lookup_entry(path, &darktable.control->accels.darkroom_skip_mouse_events);
 
-  // set focus to the search module text box
-  dt_accel_path_view(path, sizeof(path), "darkroom", "search modules");
-  gtk_accel_map_lookup_entry(path, &darktable.control->accels.darkroom_search_modules_focus);
-
   // Global
   dt_accel_path_global(path, sizeof(path), "toggle side borders");
   gtk_accel_map_lookup_entry(path, &darktable.control->accels.global_sideborders);
-
-  dt_accel_path_global(path, sizeof(path), "zoom in");
-  gtk_accel_map_lookup_entry(path, &darktable.control->accels.global_zoom_in);
-
-  dt_accel_path_global(path, sizeof(path), "zoom out");
-  gtk_accel_map_lookup_entry(path, &darktable.control->accels.global_zoom_out);
 
   dt_accel_path_global(path, sizeof(path), "show accels window");
   gtk_accel_map_lookup_entry(path, &darktable.control->accels.global_accels_window);
@@ -1027,19 +1017,33 @@ static gboolean window_configure(GtkWidget *da, GdkEvent *event, gpointer user_d
   return FALSE;
 }
 
+guint dt_gui_translated_key_state(GdkEventKey *event)
+{
+  if (gdk_keyval_to_lower(event->keyval) == gdk_keyval_to_upper(event->keyval) )
+  {
+    //not an alphabetic character
+    //find any modifiers consumed to produce keyval
+    guint consumed;
+    gdk_keymap_translate_keyboard_state(gdk_keymap_get_for_display(gdk_display_get_default()), event->hardware_keycode, event->state, event->group, NULL, NULL, NULL, &consumed);
+    return event->state & ~consumed & KEY_STATE_MASK;
+  }
+  else
+    return event->state & KEY_STATE_MASK;
+}
+
 static gboolean key_pressed_override(GtkWidget *w, GdkEventKey *event, gpointer user_data)
 {
-  return dt_control_key_pressed_override(event->keyval, event->state & KEY_STATE_MASK);
+  return dt_control_key_pressed_override(event->keyval, dt_gui_translated_key_state(event));
 }
 
 static gboolean key_pressed(GtkWidget *w, GdkEventKey *event, gpointer user_data)
 {
-  return dt_control_key_pressed(gdk_keyval_to_lower(event->keyval), event->state & KEY_STATE_MASK);
+  return dt_control_key_pressed(gdk_keyval_to_lower(event->keyval), dt_gui_translated_key_state(event));
 }
 
 static gboolean key_released(GtkWidget *w, GdkEventKey *event, gpointer user_data)
 {
-  return dt_control_key_released(gdk_keyval_to_lower(event->keyval), event->state & KEY_STATE_MASK);
+  return dt_control_key_released(gdk_keyval_to_lower(event->keyval), dt_gui_translated_key_state(event));
 }
 
 static gboolean button_pressed(GtkWidget *w, GdkEventButton *event, gpointer user_data)
@@ -1378,10 +1382,6 @@ int dt_gui_gtk_init(dt_gui_gtk_t *gui)
 
   dt_accel_connect_global("switch view",
                           g_cclosure_new(G_CALLBACK(view_switch_key_accel_callback), NULL, NULL));
-
-  // Global zoom in & zoom out
-  dt_accel_register_global(NC_("accel", "zoom in"), GDK_KEY_plus, GDK_CONTROL_MASK);
-  dt_accel_register_global(NC_("accel", "zoom out"), GDK_KEY_minus, GDK_CONTROL_MASK);
 
   // accels window
   dt_accel_register_global(NC_("accel", "show accels window"), GDK_KEY_h, 0);
